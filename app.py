@@ -78,6 +78,16 @@ def set_language_route(lang):
 # ==================== DATABASE MODELS ====================
 
 
+# Association table for many-to-many relationship between Appointment and Doctor
+appointment_doctors = db.Table(
+    "appointment_doctors",
+    db.Column(
+        "appointment_id", db.Integer, db.ForeignKey("appointments.id"), primary_key=True
+    ),
+    db.Column("doctor_id", db.Integer, db.ForeignKey("doctors.id"), primary_key=True),
+)
+
+
 class Department(db.Model):
     __tablename__ = "departments"
     id = db.Column(db.Integer, primary_key=True)
@@ -182,7 +192,9 @@ class Appointment(db.Model):
     __tablename__ = "appointments"
     id = db.Column(db.Integer, primary_key=True)
     patient_id = db.Column(db.Integer, db.ForeignKey("patients.id"), nullable=False)
-    doctor_id = db.Column(db.Integer, db.ForeignKey("doctors.id"), nullable=False)
+    doctor_id = db.Column(
+        db.Integer, db.ForeignKey("doctors.id"), nullable=True
+    )  # Primary doctor (optional)
     appointment_date = db.Column(db.DateTime, nullable=False)
     duration = db.Column(db.Integer, default=30)  # minutes
     status = db.Column(
@@ -194,6 +206,11 @@ class Appointment(db.Model):
     notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+    # Many-to-many relationship with doctors
+    doctors = db.relationship(
+        "Doctor", secondary=appointment_doctors, backref="appointments_list", lazy=True
+    )
+
     def to_dict(self):
         return {
             "id": self.id,
@@ -201,6 +218,8 @@ class Appointment(db.Model):
             "patient_name": self.patient.full_name if self.patient else None,
             "doctor_id": self.doctor_id,
             "doctor_name": self.doctor.full_name if self.doctor else None,
+            "doctor_ids": [d.id for d in self.doctors],
+            "doctor_names": [d.full_name for d in self.doctors],
             "appointment_date": self.appointment_date.isoformat()
             if self.appointment_date
             else None,
@@ -313,9 +332,10 @@ def init_db():
             db.session.add_all(departments)
             db.session.commit()
 
-        # Add sample doctors if none exist
+        # Add sample doctors if none exist (2 per department)
         if Doctor.query.count() == 0:
             doctors = [
+                # Department 1: Nội Tổng Quát
                 Doctor(
                     first_name="Nguyễn Văn",
                     last_name="An",
@@ -332,34 +352,70 @@ def init_db():
                     status="available",
                     department_id=1,
                 ),
+                # Department 2: Ngoại Khoa
                 Doctor(
                     first_name="Lê Văn",
                     last_name="Cường",
                     email="levancuong@hospital.com",
                     specialty="Ngoại Khoa",
-                    status="busy",
+                    status="available",
                     department_id=2,
                 ),
                 Doctor(
                     first_name="Phạm Thị",
                     last_name="Dung",
                     email="phamthidung@hospital.com",
+                    specialty="Ngoại Khoa",
+                    status="busy",
+                    department_id=2,
+                ),
+                # Department 3: Nhi Khoa
+                Doctor(
+                    first_name="Hoàng Văn",
+                    last_name="Em",
+                    email="hoangvanem@hospital.com",
                     specialty="Nhi Khoa",
                     status="available",
                     department_id=3,
                 ),
                 Doctor(
-                    first_name="Hoàng Văn",
-                    last_name="Em",
-                    email="hoangvanem@hospital.com",
+                    first_name="Vũ Thị",
+                    last_name="Phương",
+                    email="vuthiphuong@hospital.com",
+                    specialty="Nhi Khoa",
+                    status="available",
+                    department_id=3,
+                ),
+                # Department 4: Sản Khoa
+                Doctor(
+                    first_name="Đỗ Văn",
+                    last_name="Giang",
+                    email="dovangiang@hospital.com",
+                    specialty="Sản Khoa",
+                    status="available",
+                    department_id=4,
+                ),
+                Doctor(
+                    first_name="Ngô Thị",
+                    last_name="Hương",
+                    email="ngothihuong@hospital.com",
                     specialty="Sản Khoa",
                     status="off-duty",
                     department_id=4,
                 ),
+                # Department 5: Tai Mũi Họng
                 Doctor(
-                    first_name="Vũ Thị",
-                    last_name="Phương",
-                    email="vuthiphuong@hospital.com",
+                    first_name="Bùi Văn",
+                    last_name="Khánh",
+                    email="buivankhanh@hospital.com",
+                    specialty="Tai Mũi Họng",
+                    status="available",
+                    department_id=5,
+                ),
+                Doctor(
+                    first_name="Dương Thị",
+                    last_name="Lan",
+                    email="duongthilan@hospital.com",
                     specialty="Tai Mũi Họng",
                     status="available",
                     department_id=5,
@@ -493,7 +549,7 @@ def init_db():
                     appointment_date=today.replace(hour=9, minute=0, second=0),
                     status="scheduled",
                     type="consultation",
-                    notes="Regular check-up",
+                    notes="Khám tổng quát định kỳ",
                 ),
                 Appointment(
                     patient_id=4,
@@ -501,18 +557,33 @@ def init_db():
                     appointment_date=today.replace(hour=10, minute=0, second=0),
                     status="scheduled",
                     type="follow-up",
-                    notes="Cardiac monitoring",
+                    notes="Theo dõi sau phẫu thuật",
                 ),
                 Appointment(
                     patient_id=8,
-                    doctor_id=2,
+                    doctor_id=7,
                     appointment_date=today.replace(hour=14, minute=0, second=0),
                     status="scheduled",
                     type="consultation",
-                    notes="General consultation",
+                    notes="Tư vấn sức khỏe",
                 ),
             ]
             db.session.add_all(appointments)
+            db.session.commit()
+
+            # Assign multiple doctors to appointments (many-to-many)
+            doctor_map = {
+                1: [1, 2],  # Appointment 1: 2 doctors from Internal Medicine
+                2: [3, 4],  # Appointment 2: 2 doctors from Surgery
+                3: [7, 8],  # Appointment 3: 2 doctors from Obstetrics
+            }
+            for appt_id, doctor_ids in doctor_map.items():
+                appt = Appointment.query.get(appt_id)
+                if appt:
+                    for doc_id in doctor_ids:
+                        doc = Doctor.query.get(doc_id)
+                        if doc and doc not in appt.doctors:
+                            appt.doctors.append(doc)
             db.session.commit()
 
         # Add sample queue entries if none exist
@@ -1029,6 +1100,21 @@ def api_appointments():
 
         db.session.add(appointment)
         db.session.commit()
+
+        # Handle multiple doctors (many-to-many)
+        doctor_ids = data.get("doctor_ids", [])
+        if doctor_ids:
+            for doc_id in doctor_ids:
+                doc = Doctor.query.get(doc_id)
+                if doc and doc not in appointment.doctors:
+                    appointment.doctors.append(doc)
+            db.session.commit()
+        elif appointment.doctor_id:
+            # Fallback: add primary doctor to many-to-many list
+            doc = Doctor.query.get(appointment.doctor_id)
+            if doc and doc not in appointment.doctors:
+                appointment.doctors.append(doc)
+                db.session.commit()
 
         return jsonify(appointment.to_dict()), 201
 
