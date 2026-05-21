@@ -7,3 +7,5 @@ __pycache__/
 env/
 venv/
 instance/
+cookies.txt
+server.log
