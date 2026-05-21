@@ -1133,8 +1133,10 @@ def internal_error(error):
 
 # ==================== MAIN ====================
 
+# Initialize database on startup (works for both direct run and gunicorn)
+init_db()
+
 if __name__ == "__main__":
-    init_db()
     # Production: use PORT env var; Development: default 5000
     port = int(os.environ.get("PORT", 5000))
     debug_mode = os.environ.get("FLASK_DEBUG", "False").lower() == "true"
