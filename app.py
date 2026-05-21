@@ -130,18 +130,28 @@ class Doctor(db.Model):
     department_id = db.Column(db.Integer, db.ForeignKey("departments.id"))
     appointments = db.relationship("Appointment", backref="doctor", lazy=True)
 
+    @property
+    def full_name(self):
+        return f"{self.first_name} {self.last_name}"
+
+    @property
+    def department_name(self):
+        if self.department:
+            return self.department.name
+        return "Unassigned"
+
     def to_dict(self):
         return {
             "id": self.id,
             "first_name": self.first_name,
             "last_name": self.last_name,
-            "full_name": f"{self.first_name} {self.last_name}",
+            "full_name": self.full_name,
             "email": self.email,
             "phone": self.phone,
             "specialty": self.specialty,
             "status": self.status,
             "department_id": self.department_id,
-            "department_name": self.department.name if self.department else None,
+            "department_name": self.department_name,
         }
 
 
@@ -320,28 +330,35 @@ def init_db():
     with app.app_context():
         db.create_all()
 
-        # Add sample departments if none exist
-        if Department.query.count() == 0:
-            departments = [
-                Department(name="Nội Tổng Quát", code="NTQ", capacity=50),
-                Department(name="Ngoại Khoa", code="NK", capacity=30),
-                Department(name="Nhi Khoa", code="NHI", capacity=25),
-                Department(name="Sản Khoa", code="SK", capacity=20),
-                Department(name="Tai Mũi Họng", code="TMH", capacity=20),
-            ]
-            db.session.add_all(departments)
-            db.session.commit()
+        # Clear existing sample data to ensure consistency
+        # (Remove old data that might have outdated names/specialties)
+        QueueEntry.query.delete()
+        Appointment.query.delete()
+        Patient.query.delete()
+        Doctor.query.delete()
+        Department.query.delete()
+        db.session.commit()
 
-        # Add sample doctors if none exist (2 per department)
-        if Doctor.query.count() == 0:
-            doctors = [
-                # Department 1: Nội Tổng Quát
-                Doctor(
-                    first_name="Nguyễn Văn",
-                    last_name="An",
-                    email="nguyenvanan@hospital.com",
-                    specialty="Nội Tổng Quát",
-                    status="available",
+        # Add sample departments
+        departments = [
+            Department(name="Nội Tổng Quát", code="NTQ", capacity=50),
+            Department(name="Ngoại Khoa", code="NK", capacity=30),
+            Department(name="Nhi Khoa", code="NHI", capacity=25),
+            Department(name="Sản Khoa", code="SK", capacity=20),
+            Department(name="Tai Mũi Họng", code="TMH", capacity=20),
+        ]
+        db.session.add_all(departments)
+        db.session.commit()
+
+        # Add sample doctors (2 per department)
+        doctors = [
+            # Department 1: Nội Tổng Quát
+            Doctor(
+                first_name="Nguyễn Văn",
+                last_name="An",
+                email="nguyenvanan@hospital.com",
+                specialty="Nội Tổng Quát",
+                status="available",
                     department_id=1,
                 ),
                 Doctor(
@@ -421,14 +438,13 @@ def init_db():
                     department_id=5,
                 ),
             ]
-            db.session.add_all(doctors)
-            db.session.commit()
+        db.session.add_all(doctors)
+        db.session.commit()
 
-        # Add sample patients if none exist
-        if Patient.query.count() == 0:
-            from datetime import date
+        # Add sample patients
+        from datetime import date
 
-            patients = [
+        patients = [
                 Patient(
                     first_name="Nguyen Van",
                     last_name="A",
