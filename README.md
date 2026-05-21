@@ -146,6 +146,13 @@ Khi bác sĩ nhấn "Đã khám xong", hệ thống tự động chọn bệnh n
 - Responsive design (Bootstrap 5), hỗ trợ mobile
 - Xuất CSV/PDF
 
+### 17. Hỗ trợ Đa ngôn ngữ (i18n)
+- **Song ngữ Việt-Anh**: Toggle giữa Tiếng Việt và English toàn bộ hệ thống
+- **200+ translation keys**: Bao phủ tất cả UI elements
+- **Auto-detect language**: Tự động phát hiện ngôn ngữ trình duyệt
+- **URL parameter**: `?lang=vi` hoặc `?lang=en` để ép buộc ngôn ngữ
+- **Session persistence**: Ghi nhớ lựa chọn của người dùng
+
 ---
 
 ## Kiến trúc hệ thống
@@ -265,6 +272,20 @@ python app.py
 # Mở trình duyệt tại http://localhost:5000
 ```
 
+### Triển khai Public (Render.com)
+
+```bash
+# 1. Push code lên GitHub (đã xong)
+# 2. Vào https://render.com
+# 3. New Web Service → Connect GitHub repo
+# 4. Settings:
+#    - Name: hospital-triage
+#    - Runtime: Python 3
+#    - Build Command: pip install -r requirements.txt
+#    - Start Command: gunicorn app:app
+# 5. Click Deploy
+```
+
 ### Chạy Unit Tests (pytest)
 
 ```bash
@@ -340,7 +361,11 @@ hospital-triage-system/
 ├── performance_test.py         # Performance & Load Tests (10K+ records)
 ├── triage_system.py            # Core Triage System (Đặt lịch, Check-in, Định tuyến)
 ├── billing_system.py           # Hệ thống tính tiền (Bill, Revenue tracking)
+├── translations.py             # Hệ thống đa ngôn ngữ (i18n)
+├── seed_patients.py            # Seed dữ liệu mẫu vào DB
+├── seed_queue.py               # Seed hàng đợi mẫu
 ├── requirements.txt            # Danh sách dependencies
+├── Procfile                    # Cấu hình deploy (Gunicorn)
 ├── README.md                   # Tài liệu này
 ├── .gitignore                  # Loại trừ cache
 ├── tests/                      # Unit Tests (pytest)
@@ -506,6 +531,21 @@ Sử dụng thư viện `Faker` với locale `vi_VN` cho dữ liệu thực tế
 - So sánh với ngưỡng (threshold) và cảnh báo khi vượt quá
 
 **Chạy**: `python performance_test.py --report report.html`
+
+### translations.py
+**Chức năng**: Hệ thống đa ngôn ngữ (i18n) nhẹ, không cần thư viện ngoài
+
+**Tính năng**:
+- **TRANSLATIONS** dict: 200+ keys cho cả tiếng Việt và English
+- **Categories**: navigation, dashboard, patients, doctors, billing, reports, alerts, status, priority
+- **Helper functions**:
+  - `get_translation(key, lang)`: Lấy translation theo key
+  - `get_available_languages()`: Danh sách ngôn ngữ hỗ trợ
+  - `get_language_name(code)`: Tên hiển thị ngôn ngữ
+- **Tích hợp Flask**: Context processor inject `t()` function vào tất cả templates
+- **Language detection**: URL param → Session → Browser header → Default (vi)
+
+**Chuyển ngôn ngữ**: Click dropdown 🇻🇳 Tiếng Việt / 🇬🇧 English trên navbar
 
 ---
 
@@ -686,6 +726,59 @@ $ pytest tests/ -v
 6. **Docker & CI/CD**: Container hóa, GitHub Actions cho auto-test & deploy
 7. **Authentication**: JWT/OAuth2 cho bảo mật API và web
 8. **Audit Log**: Ghi log đầy đủ mọi thao tác cho compliance y tế
+
+---
+
+## Triển khai (Deployment)
+
+### Deploy miễn phí trên Render.com
+
+**Bước 1**: Tạo tài khoản [Render.com](https://render.com) (miễn phí)
+
+**Bước 2**: New Web Service → Connect GitHub repo
+```
+Repository: NQKhaixyz/Hospital-Triage-System
+Branch: master
+```
+
+**Bước 3**: Cấu hình
+```
+Name: hospital-triage
+Runtime: Python 3
+Build Command: pip install -r requirements.txt
+Start Command: gunicorn app:app
+```
+
+**Bước 4**: Click **Deploy**
+
+**Kết quả**: App sẽ có URL dạng `https://hospital-triage.onrender.com`
+
+### Deploy Local (Development)
+
+```bash
+# 1. Clone repo
+git clone https://github.com/NQKhaixyz/Hospital-Triage-System.git
+cd Hospital-Triage-System
+
+# 2. Cài dependencies
+pip install -r requirements.txt
+
+# 3. Chạy server
+python app.py
+
+# 4. Mở trình duyệt: http://localhost:5000
+```
+
+### Docker (Optional)
+
+```dockerfile
+FROM python:3.11-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+COPY . .
+CMD ["gunicorn", "app:app", "--bind", "0.0.0.0:5000"]
+```
 
 ---
 

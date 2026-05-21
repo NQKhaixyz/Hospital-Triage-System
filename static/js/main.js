@@ -13,6 +13,52 @@ document.addEventListener('DOMContentLoaded', function() {
         return new bootstrap.Popover(popoverTriggerEl);
     });
 
+    // Update clock every second
+    function updateClock() {
+        const now = new Date();
+        const timeString = now.toLocaleTimeString('vi-VN', { 
+            hour: '2-digit', 
+            minute: '2-digit',
+            second: '2-digit'
+        });
+        const dateString = now.toLocaleDateString('vi-VN', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+        
+        // Update navbar clock
+        const clockElement = document.getElementById('current-time');
+        if (clockElement) {
+            clockElement.textContent = timeString;
+            clockElement.title = dateString; // Show full date on hover
+        }
+        
+        // Update footer last-updated
+        const lastUpdated = document.getElementById('last-updated');
+        if (lastUpdated) {
+            lastUpdated.textContent = now.toLocaleString('vi-VN');
+        }
+        
+        // Update check-in form time field (if on check-in page)
+        const checkinTimeElement = document.getElementById('checkin-time');
+        if (checkinTimeElement) {
+            checkinTimeElement.value = now.toLocaleString('vi-VN', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+        }
+    }
+    
+    // Update immediately and then every second
+    updateClock();
+    setInterval(updateClock, 1000);
+
     // Auto-dismiss alerts after 5 seconds
     setTimeout(function() {
         const alerts = document.querySelectorAll('.alert-dismissible');

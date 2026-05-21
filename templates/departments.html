@@ -57,7 +57,7 @@
             </div>
             <div class="card-footer bg-light">
                 <small class="text-muted">
-                    <i class="bi bi-clock"></i> Avg. wait: {{ random.randint(10, 45) }} min
+                    <i class="bi bi-clock"></i> Avg. wait: {{ dept.waiting * 5 + 10 if dept.waiting else 10 }} min
                 </small>
             </div>
         </div>

@@ -226,7 +226,9 @@ class Bill(db.Model):
         return {
             "id": self.id,
             "patient_id": self.patient_id,
-            "patient_name": self.patient.full_name if self.patient else None,
+            "patient_name": f"{self.patient.first_name} {self.patient.last_name}"
+            if self.patient
+            else None,
             "amount": self.amount,
             "description": self.description,
             "status": self.status,
@@ -250,13 +252,35 @@ class QueueEntry(db.Model):
     started_at = db.Column(db.DateTime)
     completed_at = db.Column(db.DateTime)
 
+    # Relationships
+    patient = db.relationship("Patient", backref="queue_entries", lazy=True)
+    department = db.relationship("Department", backref="queue_entries", lazy=True)
+
+    @property
+    def patient_name(self):
+        if self.patient:
+            return f"{self.patient.first_name} {self.patient.last_name}"
+        return "Unknown"
+
+    @property
+    def department_name(self):
+        if self.department:
+            return self.department.name
+        return "Unknown"
+
+    @property
+    def wait_time(self):
+        if self.checked_in_at:
+            return int((datetime.utcnow() - self.checked_in_at).total_seconds() // 60)
+        return 0
+
     def to_dict(self):
         return {
             "id": self.id,
             "patient_id": self.patient_id,
-            "patient_name": self.patient.full_name if self.patient else None,
+            "patient_name": self.patient_name,
             "department_id": self.department_id,
-            "department_name": self.department.name if self.department else None,
+            "department_name": self.department_name,
             "priority": self.priority,
             "status": self.status,
             "checked_in_at": self.checked_in_at.isoformat()
@@ -266,9 +290,7 @@ class QueueEntry(db.Model):
             "completed_at": self.completed_at.isoformat()
             if self.completed_at
             else None,
-            "wait_time": (datetime.utcnow() - self.checked_in_at).total_seconds() // 60
-            if self.checked_in_at
-            else 0,
+            "wait_time": self.wait_time,
         }
 
 
@@ -524,7 +546,7 @@ def appointments():
 
 @app.route("/checkin")
 def checkin():
-    patients = Patient.query.filter_by(status="active").all()
+    patients = Patient.query.all()  # Get all patients, not just active
     departments = Department.query.all()
     return render_template("checkin.html", patients=patients, departments=departments)
 
@@ -926,11 +948,26 @@ def api_billing(patient_id):
 def api_create_bill():
     data = request.get_json()
 
+    # Validate required fields
+    if not data.get("patient_id"):
+        return jsonify({"error": "Patient is required"}), 400
+
+    amount = data.get("amount")
+    if not amount or amount == "":
+        return jsonify({"error": "Amount is required"}), 400
+
+    try:
+        amount = float(amount)
+        if amount <= 0:
+            return jsonify({"error": "Amount must be greater than 0"}), 400
+    except ValueError:
+        return jsonify({"error": "Invalid amount"}), 400
+
     bill = Bill(
-        patient_id=data.get("patient_id"),
-        amount=data.get("amount"),
-        description=data.get("description"),
-        status=data.get("status", "pending"),
+        patient_id=int(data.get("patient_id")),
+        amount=amount,
+        description=data.get("description", ""),
+        status="pending",
     )
 
     db.session.add(bill)
