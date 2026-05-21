@@ -371,6 +371,197 @@ def init_db():
             db.session.add_all(doctors)
             db.session.commit()
 
+        # Add sample patients if none exist
+        if Patient.query.count() == 0:
+            from datetime import date
+
+            patients = [
+                Patient(
+                    first_name="Nguyen Van",
+                    last_name="A",
+                    email="nguyenvana@email.com",
+                    phone="0901234567",
+                    date_of_birth=date(1979, 5, 15),
+                    gender="male",
+                    address="123 Le Loi, Q1, HCMC",
+                    emergency_contact="0909999999",
+                    blood_type="O+",
+                    status="active",
+                    priority=1,
+                ),
+                Patient(
+                    first_name="Tran Thi",
+                    last_name="B",
+                    email="tranthib@email.com",
+                    phone="0912345678",
+                    date_of_birth=date(1992, 8, 22),
+                    gender="female",
+                    address="456 Nguyen Trai, Q5, HCMC",
+                    emergency_contact="0918888888",
+                    blood_type="A+",
+                    status="active",
+                    priority=2,
+                ),
+                Patient(
+                    first_name="Le Van",
+                    last_name="C",
+                    email="levanc@email.com",
+                    phone="0923456789",
+                    date_of_birth=date(1996, 3, 10),
+                    gender="male",
+                    address="789 Tran Hung Dao, Q3, HCMC",
+                    emergency_contact="0927777777",
+                    blood_type="B+",
+                    status="active",
+                    priority=3,
+                ),
+                Patient(
+                    first_name="Pham Thi",
+                    last_name="D",
+                    email="phamthid@email.com",
+                    phone="0934567890",
+                    date_of_birth=date(1969, 11, 5),
+                    gender="female",
+                    address="321 Hai Ba Trung, Q1, HCMC",
+                    emergency_contact="0936666666",
+                    blood_type="AB+",
+                    status="active",
+                    priority=2,
+                ),
+                Patient(
+                    first_name="Hoang Van",
+                    last_name="E",
+                    email="hoangvane@email.com",
+                    phone="0945678901",
+                    date_of_birth=date(2016, 7, 18),
+                    gender="male",
+                    address="654 Ly Tu Trong, Q10, HCMC",
+                    emergency_contact="0945555555",
+                    blood_type="O-",
+                    status="active",
+                    priority=1,
+                ),
+                Patient(
+                    first_name="Vu Thi",
+                    last_name="F",
+                    email="vuthif@email.com",
+                    phone="0956789012",
+                    date_of_birth=date(1959, 1, 30),
+                    gender="female",
+                    address="987 Cach Mang Thang 8, Q3, HCMC",
+                    emergency_contact="0954444444",
+                    blood_type="A-",
+                    status="active",
+                    priority=3,
+                ),
+                Patient(
+                    first_name="Do Van",
+                    last_name="G",
+                    email="dovang@email.com",
+                    phone="0967890123",
+                    date_of_birth=date(2005, 12, 25),
+                    gender="male",
+                    address="147 Vo Thi Sau, Q1, HCMC",
+                    emergency_contact="0963333333",
+                    blood_type="B-",
+                    status="active",
+                    priority=3,
+                ),
+                Patient(
+                    first_name="Ngo Thi",
+                    last_name="H",
+                    email="ngothih@email.com",
+                    phone="0978901234",
+                    date_of_birth=date(1983, 9, 8),
+                    gender="female",
+                    address="258 Phan Xich Long, Q5, HCMC",
+                    emergency_contact="0972222222",
+                    blood_type="O+",
+                    status="active",
+                    priority=2,
+                ),
+            ]
+            db.session.add_all(patients)
+            db.session.commit()
+
+        # Add sample appointments if none exist
+        if Appointment.query.count() == 0:
+            from datetime import timedelta
+
+            today = datetime.utcnow()
+            appointments = [
+                Appointment(
+                    patient_id=2,
+                    doctor_id=2,
+                    appointment_date=today.replace(hour=9, minute=0, second=0),
+                    status="scheduled",
+                    type="consultation",
+                    notes="Regular check-up",
+                ),
+                Appointment(
+                    patient_id=4,
+                    doctor_id=4,
+                    appointment_date=today.replace(hour=10, minute=0, second=0),
+                    status="scheduled",
+                    type="follow-up",
+                    notes="Cardiac monitoring",
+                ),
+                Appointment(
+                    patient_id=8,
+                    doctor_id=2,
+                    appointment_date=today.replace(hour=14, minute=0, second=0),
+                    status="scheduled",
+                    type="consultation",
+                    notes="General consultation",
+                ),
+            ]
+            db.session.add_all(appointments)
+            db.session.commit()
+
+        # Add sample queue entries if none exist
+        if QueueEntry.query.count() == 0:
+            today = datetime.utcnow()
+            queue_entries = [
+                QueueEntry(
+                    patient_id=1,
+                    department_id=1,
+                    priority=1,
+                    status="waiting",
+                    checked_in_at=today - timedelta(minutes=30),
+                ),
+                QueueEntry(
+                    patient_id=3,
+                    department_id=2,
+                    priority=3,
+                    status="waiting",
+                    checked_in_at=today - timedelta(minutes=15),
+                ),
+                QueueEntry(
+                    patient_id=5,
+                    department_id=3,
+                    priority=1,
+                    status="in-progress",
+                    checked_in_at=today - timedelta(minutes=45),
+                    started_at=today - timedelta(minutes=10),
+                ),
+                QueueEntry(
+                    patient_id=6,
+                    department_id=2,
+                    priority=3,
+                    status="waiting",
+                    checked_in_at=today - timedelta(minutes=5),
+                ),
+                QueueEntry(
+                    patient_id=7,
+                    department_id=5,
+                    priority=3,
+                    status="waiting",
+                    checked_in_at=today - timedelta(minutes=20),
+                ),
+            ]
+            db.session.add_all(queue_entries)
+            db.session.commit()
+
 
 # ==================== HELPER FUNCTIONS ====================
 
