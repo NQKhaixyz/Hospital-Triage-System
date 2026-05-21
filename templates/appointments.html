@@ -45,7 +45,15 @@
                                         <strong>{{ appt.patient_name or 'Unknown' }}</strong>
                                     </td>
                                     <td>
-                                        {{ appt.doctor_name or 'Unknown' }}
+                                        {% if appt.doctors %}
+                                            {% for doc in appt.doctors %}
+                                                <span class="badge bg-primary me-1">{{ doc.full_name }}</span>
+                                            {% endfor %}
+                                        {% elif appt.doctor %}
+                                            <span class="badge bg-primary">{{ appt.doctor.full_name }}</span>
+                                        {% else %}
+                                            <span class="text-muted">Unknown</span>
+                                        {% endif %}
                                     </td>
                                     <td>
                                         {% if appt.appointment_date %}
@@ -150,13 +158,18 @@
                             </select>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">{{ t('appointments_doctor') }} *</label>
-                            <select class="form-select" name="doctor_id" required>
-                                <option value="">Select {{ t('appointments_doctor') }}</option>
+                            <label class="form-label">{{ t('appointments_doctor') }} * <small class="text-muted">(Chọn một hoặc nhiều)</small></label>
+                            <div class="border rounded p-2" style="max-height: 150px; overflow-y: auto;">
                                 {% for doctor in doctors %}
-                                <option value="{{ doctor.id }}">{{ doctor.full_name }} ({{ doctor.specialty or 'General' }})</option>
+                                <div class="form-check">
+                                    <input class="form-check-input doctor-checkbox" type="checkbox" name="doctor_ids" value="{{ doctor.id }}" id="doc_{{ doctor.id }}">
+                                    <label class="form-check-label" for="doc_{{ doctor.id }}">
+                                        {{ doctor.full_name }} ({{ doctor.specialty or 'General' }})
+                                    </label>
+                                </div>
                                 {% endfor %}
-                            </select>
+                            </div>
+                            <small class="text-danger d-none" id="doctor-error">Vui lòng chọn ít nhất 1 bác sĩ</small>
                         </div>
                     </div>
                     <div class="row">
@@ -206,7 +219,21 @@ function submitAppointmentForm() {
     const form = document.getElementById('bookAppointmentForm');
     const formData = new FormData(form);
     const data = {};
-    formData.forEach((value, key) => data[key] = value);
+    formData.forEach((value, key) => {
+        if (key === 'doctor_ids') {
+            if (!data[key]) data[key] = [];
+            data[key].push(parseInt(value));
+        } else {
+            data[key] = value;
+        }
+    });
+    
+    // Validation: cần ít nhất 1 bác sĩ
+    if (!data.doctor_ids || data.doctor_ids.length === 0) {
+        document.getElementById('doctor-error').classList.remove('d-none');
+        return;
+    }
+    document.getElementById('doctor-error').classList.add('d-none');
     
     fetch('/api/appointments', {
         method: 'POST',
@@ -261,7 +288,10 @@ function viewAppointment(id) {
     fetch(`/api/appointments/${id}`)
     .then(response => response.json())
     .then(data => {
-        alert(`Appointment Details:\n\nID: ${data.id}\nPatient: ${data.patient_name}\nDoctor: ${data.doctor_name}\nDate: ${data.appointment_date}\nType: ${data.type}\n{{ t('dept_status') }}: ${data.status}\nDuration: ${data.duration} minutes\nNotes: ${data.notes || 'None'}`);
+        const doctors = data.doctor_names && data.doctor_names.length > 0 
+            ? data.doctor_names.join(', ') 
+            : data.doctor_name || 'Unknown';
+        alert(`Appointment Details:\n\nID: ${data.id}\nPatient: ${data.patient_name}\nDoctors: ${doctors}\nDate: ${data.appointment_date}\nType: ${data.type}\nStatus: ${data.status}\nDuration: ${data.duration} minutes\nNotes: ${data.notes || 'None'}`);
     })
     .catch(error => {
         console.error('Error:', error);
